@@ -3,7 +3,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.modules.users.models import User
 
 class UserRepository:
-    def create(self, data: dict, db: Session) -> User:
+    async def create(self, data: dict, db: Session) -> User:
         record = User(**data)
         try:
             db.add(record)
@@ -14,5 +14,5 @@ class UserRepository:
             db.rollback()
             raise e
     
-    def find_by_email(self, email: str, db: Session) -> User:
-        return db.query(User).filter(User.email == email).first()
+    async def find_by_email(self, email: str, db: Session) -> User:
+        return db.query(User).filter(User.email == email.lower()).first()
