@@ -14,4 +14,9 @@ class Settings:
 
     DB1_NAME: str = os.getenv("DB1_NAME")
 
+    ALLOWED_ORIGINS: list = ["*"]
+    ALLOWED_CREDENTIALS: bool = True
+    ALLOWED_METHODS: list = ["*"]
+    ALLOWED_HEADERS: list = ["*"]
+
 settings = Settings()
