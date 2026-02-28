@@ -1,12 +1,13 @@
 import jwt
 import datetime
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.settings import settings
 
 auth_scheme = HTTPBearer()
 
 
-class Jwt:
+class JwtService:
     def create_access_token(
         self, payload: dict, expires_delta: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES
     ) -> str:
@@ -41,3 +42,16 @@ class Jwt:
             return None
         except jwt.InvalidTokenError:
             return None
+
+    def authenticate(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+        payload = self.decode_token(token.credentials)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token",
+            )
+
+        return payload
+
+
+jwt_service = JwtService()

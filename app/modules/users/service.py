@@ -2,6 +2,7 @@ import datetime
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from app.core.jwt import jwt_service
 from app.core.security import hash_password, verify_password
 from app.modules.users.enum import UserStatus
 from app.modules.users.repository import UserRepository
@@ -53,7 +54,7 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def authenticate(self, request_body: UserLogin, db1: Session) -> JSONResponse:
+    async def login_user(self, request_body: UserLogin, db1: Session) -> JSONResponse:
         try:
             record = await user_repository.find_by_email(request_body.email, db1)
 
@@ -71,10 +72,20 @@ class UserService:
                     status_code=status.HTTP_403_FORBIDDEN,
                 )
 
+            token_payload = {
+                "user_id": str(record.user_id),
+                "email": record.email,
+            }
+
             return JSONResponse(
                 content={
-                    "message": "Authentication successful",
-                    "data": {"user_id": str(record.user_id), "email": record.email},
+                    "data": {
+                        "token_type": "bearer",
+                        "access_token": jwt_service.create_access_token(token_payload),
+                        "refresh_token": jwt_service.create_refresh_token(
+                            token_payload
+                        ),
+                    }
                 },
                 status_code=status.HTTP_200_OK,
             )
@@ -97,7 +108,9 @@ class UserService:
                 )
 
             return JSONResponse(
-                content={"user_id": str(record.user_id), "email": record.email},
+                content={
+                    "data": {"user_id": str(record.user_id), "email": record.email}
+                },
                 status_code=status.HTTP_200_OK,
             )
 
