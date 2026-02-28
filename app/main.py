@@ -8,22 +8,24 @@ from app.modules.users.router import users_router
 
 DB_NAMES = [settings.DB1_NAME]
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db_connection_manager.init_engines(DB_NAMES)
-    
+
     for db_name, Base in zip(DB_NAMES, [BaseDb1]):
         engine = db_connection_manager.get_engine(db_name)
         Base.metadata.create_all(bind=engine)
-        
+
     yield
 
     db_connection_manager.close_all()
 
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -35,4 +37,3 @@ app.add_middleware(
 )
 
 app.include_router(users_router, prefix=settings.API_V1_STR)
-

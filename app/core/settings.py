@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Settings:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = os.getenv("PROJECT_NAME")
@@ -18,5 +19,11 @@ class Settings:
     ALLOWED_CREDENTIALS: bool = True
     ALLOWED_METHODS: list = ["*"]
     ALLOWED_HEADERS: list = ["*"]
+
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS"))
+
 
 settings = Settings()
