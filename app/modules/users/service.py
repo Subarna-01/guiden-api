@@ -88,3 +88,30 @@ class UserService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred"
             )
+        
+    async def get_user_by_id(self, user_id: str, db1: Session) -> JSONResponse:
+        try:
+            record = await user_repository.find_by_id(user_id, db1)
+
+            if not record or record.status == UserStatus.INACTIVE.value:
+                return JSONResponse(
+                    content={
+                        "message": "User not found"
+                    },
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
+            
+            return JSONResponse(
+                content={
+                    "user_id": str(record.user_id),
+                    "email": record.email
+                },
+                status_code=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            print(e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred"
+            )
