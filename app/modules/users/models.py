@@ -5,13 +5,10 @@ from sqlalchemy import (
     Boolean,
     TIMESTAMP,
 )
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID, INET
 from sqlalchemy.sql import func
-
-Base = declarative_base()
-
-class User(Base):
+from app.core.database.base import BaseDb1
+class User(BaseDb1):
     __tablename__ = "users"
     __table_args__ = {"extend_existing": True}
 

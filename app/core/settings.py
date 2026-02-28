@@ -12,4 +12,6 @@ class Settings:
     POSTGRES_USER: str = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
 
+    DB1_NAME: str = os.getenv("DB1_NAME")
+
 settings = Settings()
