@@ -2,8 +2,7 @@ import datetime
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from app.core.security.jwt import jwt_service
-from app.core.security.password import password_service
+from app.core.security import jwt, password
 from app.modules.users.enum import UserStatus
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas import UserCreate, UserLogin
@@ -15,9 +14,9 @@ class UserService:
     def __init__(self) -> None:
         pass
 
-    async def create_user(self, request_body: UserCreate, db1: Session) -> JSONResponse:
+    async def create_user(self, request_body: UserCreate, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_email(request_body.email, db1)
+            record = await user_repository.find_by_email(request_body.email, db)
 
             if record:
                 return JSONResponse(
@@ -29,13 +28,13 @@ class UserService:
 
             data = {
                 "email": request_body.email.lower(),
-                "password_hash": password_service.hash_password(request_body.password),
+                "password_hash": password.hash_password(request_body.password),
                 "status": UserStatus.ACTIVE.value,
                 "ipv4_addr_created_at": None,
                 "ipv4_addr_last_logged_in_at": None,
             }
 
-            new_record = await user_repository.create(data, db1)
+            new_record = await user_repository.create(data, db)
             return JSONResponse(
                 content={
                     "message": "User created successfully",
@@ -54,11 +53,11 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def login_user(self, request_body: UserLogin, db1: Session) -> JSONResponse:
+    async def login_user(self, request_body: UserLogin, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_email(request_body.email, db1)
+            record = await user_repository.find_by_email(request_body.email, db)
 
-            if not record or not password_service.verify_password(
+            if not record or not password.verify_password(
                 request_body.password, record.password_hash
             ):
                 return JSONResponse(
@@ -81,10 +80,8 @@ class UserService:
                 content={
                     "data": {
                         "token_type": "bearer",
-                        "access_token": jwt_service.create_access_token(token_payload),
-                        "refresh_token": jwt_service.create_refresh_token(
-                            token_payload
-                        ),
+                        "access_token": jwt.create_access_token(token_payload),
+                        "refresh_token": jwt.create_refresh_token(token_payload),
                     }
                 },
                 status_code=status.HTTP_200_OK,
@@ -97,9 +94,9 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def get_user_by_id(self, user_id: str, db1: Session) -> JSONResponse:
+    async def get_user_by_id(self, user_id: str, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_id(user_id, db1)
+            record = await user_repository.find_by_id(user_id, db)
 
             if not record or record.status == UserStatus.INACTIVE.value:
                 return JSONResponse(
