@@ -2,8 +2,8 @@ import datetime
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from app.core.jwt import jwt_service
-from app.core.security import hash_password, verify_password
+from app.core.security.jwt import jwt_service
+from app.core.security.password import password_service
 from app.modules.users.enum import UserStatus
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas import UserCreate, UserLogin
@@ -29,7 +29,7 @@ class UserService:
 
             data = {
                 "email": request_body.email.lower(),
-                "password_hash": hash_password(request_body.password),
+                "password_hash": password_service.hash_password(request_body.password),
                 "status": UserStatus.ACTIVE.value,
                 "ipv4_addr_created_at": None,
                 "ipv4_addr_last_logged_in_at": None,
@@ -58,7 +58,7 @@ class UserService:
         try:
             record = await user_repository.find_by_email(request_body.email, db1)
 
-            if not record or not verify_password(
+            if not record or not password_service.verify_password(
                 request_body.password, record.password_hash
             ):
                 return JSONResponse(
