@@ -109,7 +109,11 @@ class UserService:
 
             return JSONResponse(
                 content={
-                    "data": {"user_id": str(record.user_id), "email": record.email}
+                    "data": {
+                        "user_id": str(record.user_id),
+                        "email": record.email,
+                        "created_at": str(record.created_at),
+                    }
                 },
                 status_code=status.HTTP_200_OK,
             )

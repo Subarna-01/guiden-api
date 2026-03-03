@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from functools import partial
 from app.core.database.dependencies import get_db
 from app.core.jwt import jwt_service
 from app.core.settings import settings
@@ -15,7 +16,7 @@ user_service = UserService()
 @users_router.post("/create")
 async def create_user(
     request_body: UserCreate,
-    db1: Session = Depends(lambda: next(get_db(settings.DB1_NAME))),
+    db1: Session = Depends(partial(get_db, settings.DB1_NAME)),
 ) -> JSONResponse:
     return await user_service.create_user(request_body, db1)
 
@@ -23,7 +24,7 @@ async def create_user(
 @users_router.post("/auth/login")
 async def login_user(
     request_body: UserLogin,
-    db1: Session = Depends(lambda: next(get_db(settings.DB1_NAME))),
+    db1: Session = Depends(partial(get_db, settings.DB1_NAME)),
 ) -> JSONResponse:
     return await user_service.login_user(request_body, db1)
 
@@ -31,7 +32,7 @@ async def login_user(
 @users_router.get("/me")
 async def get_user_by_id(
     data=Depends(jwt_service.authenticate),
-    db1: Session = Depends(lambda: next(get_db(settings.DB1_NAME))),
+    db1: Session = Depends(partial(get_db, settings.DB1_NAME)),
 ) -> JSONResponse:
     if not isinstance(data, dict):
         return data
