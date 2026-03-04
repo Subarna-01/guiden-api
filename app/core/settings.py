@@ -13,7 +13,7 @@ class Settings:
     POSTGRES_USER: str = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
 
-    DB1_NAME: str = os.getenv("DB1_NAME")
+    USERS_DB_NAME: str = os.getenv("USERS_DB_NAME")
 
     ALLOWED_ORIGINS: list = ["*"]
     ALLOWED_CREDENTIALS: bool = True
@@ -24,6 +24,8 @@ class Settings:
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS"))
+
+    USERS_BUCKET_NAME: str = os.getenv("USERS_BUCKET_NAME")
 
 
 settings = Settings()
