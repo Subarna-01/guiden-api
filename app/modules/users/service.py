@@ -129,8 +129,7 @@ class UserService:
                 usr_profile_pic_entry
                 and usr_profile_pic_entry.is_removed == False
             ):
-                blob = gcs_bucket.get_blob(usr_profile_pic_entry.object_path)
-                profile_pic_url = gcs_bucket.generate_signed_url(blob)
+                profile_pic_url = gcs_bucket.generate_signed_url(usr_profile_pic_entry.object_path)
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
@@ -212,7 +211,7 @@ class UserService:
             try:
                 file_bytes = await file.read()
                 blob.upload_from_string(file_bytes, content_type=file.content_type)
-                url = gcs_bucket.generate_signed_url(blob)
+                url = gcs_bucket.generate_signed_url(blob_name)
             except Exception as e:
                 db.rollback()
                 raise HTTPException(

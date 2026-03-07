@@ -33,10 +33,10 @@ class GCSBucket:
     
     def generate_signed_url(
         self,
-        blob: Blob,
+        blob_name: str,
         method: str = "GET",
     ) -> str:
-        url: str = blob.generate_signed_url(
+        url: str = self.get_blob(blob_name).generate_signed_url(
             version="v4",
             expiration=datetime.timedelta(minutes=settings.GCS_SIGNED_URL_EXPIRE_MINUTES),
             method=method,
