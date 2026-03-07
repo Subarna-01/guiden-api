@@ -1,11 +1,8 @@
 from pydantic import BaseModel, constr, EmailStr
-
-
-class UserCreate(BaseModel):
+class UserAccountCreate(BaseModel):
     email: EmailStr
     password: constr(min_length=8)  # type: ignore
 
-
-class UserLogin(BaseModel):
+class UserAccountLogin(BaseModel):
     email: EmailStr
     password: str

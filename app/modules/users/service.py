@@ -1,101 +1,104 @@
-import os
 import datetime
-import uuid
 from fastapi import status, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
-from google.cloud import storage
-from google.oauth2 import service_account
-from app.core.security import jwt, password
+from app.core.gcp.gcs_bucket import GCSBucket
+from app.core.security.jwt import create_access_token, create_refresh_token
+from app.core.security.password import hash_password, verify_password
 from app.core.settings import settings
-from app.modules.users.enum import UserStatus
+from app.modules.users.enum import UserAccountStatus
 from app.modules.users.models import User, UserProfilePicture
-from app.modules.users.repository import UserRepository
-from app.modules.users.schemas import UserCreate, UserLogin
+from app.modules.users.schemas import UserAccountCreate, UserAccountLogin
 
-user_repository = UserRepository()
-
-
+gcs_bucket = GCSBucket(settings.USERS_BUCKET_NAME)
 class UserService:
     def __init__(self) -> None:
-        self.storage_client = storage.Client(
-            credentials=service_account.Credentials.from_service_account_file(
-                os.path.join(os.getcwd(), "guiden-487312-85574ae787d2.json")
-            )
-        )
-        self.bucket = self.storage_client.bucket(settings.USERS_BUCKET_NAME)
+        pass
 
-    async def create_user(self, request_body: UserCreate, db: Session) -> JSONResponse:
+    async def create_account(self, data: UserAccountCreate, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_email(request_body.email, db)
+            usr_entry = db.query(User)\
+                        .filter(User.email == data.email.lower())\
+                        .first()
 
-            if record:
-                return JSONResponse(
-                    content={
-                        "message": "Email already exists",
-                    },
+            if usr_entry:
+                raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
+                    detail="This email already exists"
                 )
+            
+            usr_entry = User(
+                            email=data.email.lower(), 
+                            password_hash=hash_password(data.password),
+                            status=UserAccountStatus.ACTIVE.value
+                        )
+            
+            db.add(usr_entry)
+            db.commit()
+            db.refresh(usr_entry)
 
-            data = {
-                "email": request_body.email.lower(),
-                "password_hash": password.hash_password(request_body.password),
-                "status": UserStatus.ACTIVE.value
-            }
-
-            new_record = await user_repository.create(data, db)
             return JSONResponse(
+                status_code=status.HTTP_201_CREATED,
                 content={
-                    "message": "User created successfully",
+                    "message": "Account created successfully",
                     "data": {
-                        "user_id": str(new_record.user_id),
-                        "email": new_record.email,
+                        "user_id": str(usr_entry.user_id),
+                        "email": usr_entry.email,
                     },
                 },
-                status_code=status.HTTP_201_CREATED,
             )
+        
+        except HTTPException:
+            raise
 
         except Exception as e:
             print(e)
+            db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
             )
 
-    async def login_user(self, request_body: UserLogin, db: Session) -> JSONResponse:
+    async def login_user(self, data: UserAccountLogin, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_email(request_body.email, db)
+            usr_entry = db.query(User)\
+                        .filter(User.email == data.email.lower())\
+                        .first()
 
-            if not record or not password.verify_password(
-                request_body.password, record.password_hash
+            if not usr_entry or not verify_password(
+                data.password, usr_entry.password_hash
             ):
-                return JSONResponse(
-                    content={"message": "Invalid email or password provided"},
+                raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password provided"
                 )
 
-            if record.status == UserStatus.INACTIVE.value:
-                return JSONResponse(
-                    content={"message": "Account deactivated"},
+            if usr_entry.status == UserAccountStatus.INACTIVE.value:
+                raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This account has been deactivated. Kindly re-activate and try login again"
                 )
-
+            
             token_payload = {
-                "user_id": str(record.user_id),
-                "email": record.email,
+                "user_id": str(usr_entry.user_id),
+                "email": usr_entry.email,
             }
 
             return JSONResponse(
+                status_code=status.HTTP_200_OK,
                 content={
+                    "message": "Authentication successful",
                     "data": {
                         "token_type": "bearer",
-                        "access_token": jwt.create_access_token(token_payload),
-                        "refresh_token": jwt.create_refresh_token(token_payload),
+                        "access_token": create_access_token(token_payload),
+                        "refresh_token": create_refresh_token(token_payload),
                     }
                 },
-                status_code=status.HTTP_200_OK,
             )
+        
+        except HTTPException:
+            raise
 
         except Exception as e:
             print(e)
@@ -104,46 +107,47 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def get_user_by_id(self, user_id: str, db: Session) -> JSONResponse:
+    async def get_account_details(self, user_id: str, db: Session) -> JSONResponse:
         try:
-            record = await user_repository.find_by_id(user_id, db)
+            usr_entry = db.query(User)\
+                        .filter(cast(User.user_id, String) == user_id)\
+                        .first()
 
-            if not record or record.status == UserStatus.INACTIVE.value:
-                return JSONResponse(
-                    content={"message": "User not found"},
+            if not usr_entry or usr_entry.status == UserAccountStatus.INACTIVE.value:
+                raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
                 )
 
-            profile_picture_url = None
+            profile_pic_url = None
 
-            user_profile_picture = db.query(UserProfilePicture).filter(cast(UserProfilePicture.user_id, String) == user_id).first()
+            usr_profile_pic_entry = db.query(UserProfilePicture)\
+                                    .filter(cast(UserProfilePicture.user_id, String) == user_id)\
+                                    .first()
 
             if (
-                user_profile_picture
-                and user_profile_picture.is_removed == False
+                usr_profile_pic_entry
+                and usr_profile_pic_entry.is_removed == False
             ):
-                blob = self.bucket.blob(user_profile_picture.object_path)
-                profile_picture_url = blob.generate_signed_url(
-                    version="v4",
-                    expiration=datetime.timedelta(days=7),
-                    method="GET",
-                )
+                blob = gcs_bucket.get_blob(usr_profile_pic_entry.object_path)
+                profile_pic_url = gcs_bucket.generate_signed_url(blob)
 
             return JSONResponse(
-                content={
-                    "message": "User data fetched successfully",
-                    "data": {
-                        "user_id": str(record.user_id),
-                        "email": record.email,
-                        "profile_picture": {
-                            "url": profile_picture_url,
-                            "url_validity_in_days": 7 if profile_picture_url else None
-                        },
-                        "created_at": str(record.created_at),
-                    }
-                },
                 status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Account details fetched successfully",
+                    "data": {
+                        "user_id": str(usr_entry.user_id),
+                        "email": usr_entry.email,
+                        "profile_picture": {
+                            "url": profile_pic_url
+                        }
+                    }
+                }
             )
+        
+        except HTTPException:
+            raise
 
         except Exception as e:
             print(e)
@@ -152,114 +156,78 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def update_profile_picture(self, file: UploadFile, user_id: str, requested_removal: bool, db: Session) -> JSONResponse:
+    async def update_profile_picture(self, file: UploadFile, user_id: str, db: Session) -> JSONResponse:
         try:
-            if not file.file:
+            if not file.filename:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="No files uploaded",
+                    detail="No file provided"
                 )
 
             if not file.content_type.startswith("image/"):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Only image files allowed",
+                    detail="Only image file allowed",
                 )
             
-            user = db.query(User).filter(cast(User.user_id, String) == user_id).first()
+            usr_entry = db.query(User)\
+                        .filter(cast(User.user_id, String) == user_id)\
+                        .first()
 
-            if not user or user.status == UserStatus.INACTIVE.value:
+            if not usr_entry or usr_entry.status == UserAccountStatus.INACTIVE.value:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_404_NOT_FOUND,
                     detail="User not found",
                 )
      
-            user_profile_picture = db.query(UserProfilePicture).filter(cast(UserProfilePicture.user_id, String) == user_id).first()
+            usr_profile_pic_entry = db.query(UserProfilePicture)\
+                                    .filter(cast(UserProfilePicture.user_id, String) == user_id)\
+                                    .first()
 
-            if not user_profile_picture and requested_removal:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to remove profile picture",
-                )
-
+            
             file_extension = file.filename.split(".")[-1]
             blob_name = f"{user_id}/profile-picture/{user_id}.{file_extension}"
-            blob = self.bucket.blob(blob_name)
-            signed_url = None
-    
-            if not requested_removal:
+            blob = gcs_bucket.get_blob(blob_name)
+            url = None
+
+            if not usr_profile_pic_entry:
+                usr_profile_pic_entry = UserProfilePicture(user_id=user_id, object_path=blob_name)
+                db.add(usr_profile_pic_entry)
+            else:
+                old_blob_exists = gcs_bucket.blob_exists(usr_profile_pic_entry.object_path)
+                if old_blob_exists:
+                    try:
+                        gcs_bucket.delete_blob(usr_profile_pic_entry.object_path)
+                    except Exception as e:
+                        db.rollback()
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Unable to update profile picture"
+                        )
+
+                usr_profile_pic_entry.object_path = blob_name
+                usr_profile_pic_entry.is_removed = False
+                usr_profile_pic_entry.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            try:
                 file_bytes = await file.read()
-
                 blob.upload_from_string(file_bytes, content_type=file.content_type)
-
-                signed_url = blob.generate_signed_url(
-                    version="v4",
-                    expiration=datetime.timedelta(days=7),
-                    method="GET",
+                url = gcs_bucket.generate_signed_url(blob)
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Unable to update profile picture"
                 )
-            else:
-                if user_profile_picture and user_profile_picture.object_path:
-                    user_profile_picture.is_removed = True
-                    user_profile_picture.updated_at = datetime.datetime.now(datetime.timezone.utc)
-                    db.commit()
-                    db.refresh(user_profile_picture)
-                    
-                    old_blob = self.bucket.blob(user_profile_picture.object_path)
-
-                    try:
-                        if old_blob.exists():
-                            old_blob.delete()
-                    except Exception as e:
-                        print(str(e))
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Failed to remove profile picture"
-                        )
-                    
-                    return JSONResponse(
-                        status_code=status.HTTP_200_OK,
-                        content={
-                            "message": "Profile picture updated successfully",
-                            "data": {
-                                "url": signed_url,
-                                "url_validity_in_days": 7 if signed_url else None
-                            },
-                        },
-                    )
-
-            if not user_profile_picture:
-                new_user_profile_picture = UserProfilePicture(user_id=user_id, object_path=blob_name)
-                db.add(new_user_profile_picture)
-                db.commit()
-                db.refresh(new_user_profile_picture)
-            else:
-                if blob_name != user_profile_picture.object_path:
-                    old_blob = self.bucket.blob(user_profile_picture.object_path)
-
-                    try:
-                        if old_blob.exists():
-                            old_blob.delete()
-                    except Exception as e:
-                        print(str(e))
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Failed to update profile picture"
-                        )
-                    
-                    user_profile_picture.object_path = blob_name
-
-                user_profile_picture.is_removed = False
-                user_profile_picture.updated_at = datetime.datetime.now(datetime.timezone.utc)
-                db.commit()
-                db.refresh(user_profile_picture)
-
+        
+            db.commit()
+            db.refresh(usr_profile_pic_entry)
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
-                    "message": "Profile picture updated successfully",
+                    "message": "Profile picture has been updated",
                     "data": {
-                        "url": signed_url,
-                        "url_validity_in_days": 7 if signed_url else None
+                        "url": url
                     },
                 },
             )
@@ -274,4 +242,68 @@ class UserService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
+            )
+
+    async def delete_profile_picture(self, user_id: str, db: Session) -> JSONResponse:
+        try:
+            usr_profile_pic_entry = db.query(UserProfilePicture)\
+                                    .filter(cast(UserProfilePicture.user_id, String) == user_id)\
+                                    .first()
+            
+            if not usr_profile_pic_entry:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No existing entry found"
+                )
+            
+            if usr_profile_pic_entry.is_removed:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Profile picture already deleted"
+                )
+            
+            if not usr_profile_pic_entry.object_path:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Object path not found"
+                )
+            
+            blob_exists = gcs_bucket.blob_exists(usr_profile_pic_entry.object_path)
+            
+            if not blob_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Unable to delete profile picture"
+                )
+            
+            try:
+                gcs_bucket.delete_blob(usr_profile_pic_entry.object_path)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Unable to delete profile picture"
+                )
+
+            usr_profile_pic_entry.is_removed = True
+            usr_profile_pic_entry.updated_at = datetime.datetime.now(datetime.timezone.utc) 
+            db.commit()
+            db.refresh(usr_profile_pic_entry)
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Profile picture has been removed"
+                }
+            )           
+
+        except HTTPException:
+            db.rollback()
+            raise
+        
+        except Exception as e:
+            print(e)
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred"
             )

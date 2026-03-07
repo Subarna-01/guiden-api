@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Settings:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = os.getenv("PROJECT_NAME")
@@ -30,6 +29,7 @@ class Settings:
     GCS_PROJECT_ID: str = os.getenv("GCS_PROJECT_ID")
     GCS_SECRET_ID: str = os.getenv("GCS_SECRET_ID")
     GCS_SECRET_VERSION: str = os.getenv("GCS_SECRET_VERSION")
+    GCS_SIGNED_URL_EXPIRE_MINUTES: int = int(os.getenv("GCS_SIGNED_URL_EXPIRE_MINUTES"))
 
 
 settings = Settings()

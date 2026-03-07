@@ -1,4 +1,4 @@
 import enum
-class UserStatus(enum.Enum):
+class UserAccountStatus(enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
