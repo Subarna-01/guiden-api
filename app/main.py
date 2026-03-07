@@ -8,7 +8,6 @@ from app.modules.users.router import users_router
 
 DB_NAMES = [settings.USERS_DB_NAME]
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db_connection_manager.init_engines(DB_NAMES)

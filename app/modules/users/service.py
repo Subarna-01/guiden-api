@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.gcp.gcs_bucket import GCSBucket
 from app.core.security.jwt import create_access_token, create_refresh_token
 from app.core.security.password import hash_password, verify_password
+from app.core.logging import logger
 from app.core.settings import settings
 from app.modules.users.enum import UserAccountStatus
 from app.modules.users.models import User, UserProfilePicture
@@ -53,7 +54,7 @@ class UserService:
             raise
 
         except Exception as e:
-            print(e)
+            logger.error(str(e))
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -101,7 +102,7 @@ class UserService:
             raise
 
         except Exception as e:
-            print(e)
+            logger.error(str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
@@ -149,7 +150,7 @@ class UserService:
             raise
 
         except Exception as e:
-            print(e)
+            logger.error(str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
@@ -236,7 +237,7 @@ class UserService:
             raise
 
         except Exception as e:
-            print(e)
+            logger.error(str(e))
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -300,7 +301,7 @@ class UserService:
             raise
         
         except Exception as e:
-            print(e)
+            logger.error(str(e))
             db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
