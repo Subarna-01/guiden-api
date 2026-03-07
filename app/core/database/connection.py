@@ -2,8 +2,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from typing import Dict
 from app.core.settings import settings
-
-
 class DbConnectionManager:
     _instance = None
     _engines: Dict[str, any] = {}
@@ -35,6 +33,5 @@ class DbConnectionManager:
     def close_all(self):
         for engine in self._engines.values():
             engine.dispose()
-
 
 db_connection_manager = DbConnectionManager()

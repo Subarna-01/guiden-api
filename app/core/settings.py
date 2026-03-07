@@ -27,5 +27,9 @@ class Settings:
 
     USERS_BUCKET_NAME: str = os.getenv("USERS_BUCKET_NAME")
 
+    GCS_PROJECT_ID: str = os.getenv("GCS_PROJECT_ID")
+    GCS_SECRET_ID: str = os.getenv("GCS_SECRET_ID")
+    GCS_SECRET_VERSION: str = os.getenv("GCS_SECRET_VERSION")
+
 
 settings = Settings()

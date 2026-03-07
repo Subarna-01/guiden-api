@@ -6,7 +6,6 @@ from app.core.settings import settings
 
 auth_scheme = HTTPBearer()
 
-
 def create_access_token(
     payload: dict, expires_delta: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 ) -> str:
@@ -18,7 +17,6 @@ def create_access_token(
     return jwt.encode(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
-
 
 def create_refresh_token(
     payload: dict, expires_delta: int = settings.REFRESH_TOKEN_EXPIRE_DAYS
@@ -32,7 +30,6 @@ def create_refresh_token(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
 
-
 def decode_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(
@@ -43,7 +40,6 @@ def decode_token(token: str) -> dict | None:
         return None
     except jwt.InvalidTokenError:
         return None
-
 
 def authenticate(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
     payload = decode_token(token.credentials)
