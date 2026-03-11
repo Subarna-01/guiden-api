@@ -13,6 +13,7 @@ class Settings:
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
 
     USERS_DB_NAME: str = os.getenv("USERS_DB_NAME")
+    MASTER_DB_NAME: str = os.getenv("MASTER_DB_NAME")
 
     ALLOWED_ORIGINS: list = ["*"]
     ALLOWED_CREDENTIALS: bool = True
@@ -30,6 +31,10 @@ class Settings:
     GCS_SECRET_ID: str = os.getenv("GCS_SECRET_ID")
     GCS_SECRET_VERSION: str = os.getenv("GCS_SECRET_VERSION")
     GCS_SIGNED_URL_EXPIRE_MINUTES: int = int(os.getenv("GCS_SIGNED_URL_EXPIRE_MINUTES"))
+
+    ELASTICSEARCH_CONNECTION_URL: str = os.getenv("ELASTICSEARCH_CONNECTION_URL")
+    ELASTICSEARCH_USER: str = os.getenv("ELASTICSEARCH_USER")
+    ELASTICSEARCH_PASSWORD: str = os.getenv("ELASTICSEARCH_PASSWORD")
 
 
 settings = Settings()
