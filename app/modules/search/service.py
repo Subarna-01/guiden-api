@@ -12,7 +12,7 @@ class SearchService:
             query = {
                     "query": {
                         "multi_match": {
-                            "query": q,
+                            "query": q.strip(),
                             "fields": [
                                 "name^3",
                                 "description"

@@ -5,6 +5,7 @@ from app.core.database.connection import db_connection_manager
 from app.core.elasticsearch.connection import elasticsearch_connection_manager
 from app.core.database import base
 from app.core.settings import settings
+from app.modules.master.router import master_router
 from app.modules.search.router import search_router
 from app.modules.users.router import users_router
 
@@ -41,5 +42,6 @@ app.add_middleware(
     allow_headers=settings.ALLOWED_HEADERS,
 )
 
+app.include_router(master_router, prefix=settings.API_V1_STR)
 app.include_router(search_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
