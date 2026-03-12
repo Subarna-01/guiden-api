@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from functools import partial
 from app.core.database.dependencies import get_db
-from app.core.security import jwt
+from app.core.decorators.auth import authenticate
 from app.core.settings import settings
 from app.modules.users.schemas import UserAccountCreate, UserAccountLogin
 from app.modules.users.service import UserService
@@ -21,13 +21,16 @@ async def login_user(request_body: UserAccountLogin, db: Session = Depends(parti
     return await user_service.login_user(request_body, db)
 
 @users_router.get("/me")
-async def get_account_details(decoded_token_data: dict = Depends(jwt.authenticate), db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
-    return await user_service.get_account_details(decoded_token_data.get("user_id"), db)
+@authenticate
+async def get_account_details(request: Request, user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
+    return await user_service.get_account_details(user_id, db)
 
 @users_router.put("/me/profile-picture")
-async def update_profile_picture(file: UploadFile = File(...), decoded_token_data: dict = Depends(jwt.authenticate), db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
-    return await user_service.update_profile_picture(file, decoded_token_data.get("user_id"), db)
+@authenticate
+async def update_profile_picture(file: UploadFile = File(...), user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
+    return await user_service.update_profile_picture(file, user_id, db)
 
 @users_router.delete("/me/profile-picture")
-async def delete_profile_picture(decoded_token_data: dict = Depends(jwt.authenticate), db: Session = Depends(partial(get_db, settings.USERS_DB_NAME)) ) -> JSONResponse:
-    return await user_service.delete_profile_picture(decoded_token_data.get("user_id"), db)
+@authenticate
+async def delete_profile_picture(user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME)) ) -> JSONResponse:
+    return await user_service.delete_profile_picture(user_id, db)
