@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from functools import partial
 from app.core.database.dependencies import get_db
-from app.core.decorators.auth import authenticate
+from app.core.decorators.auth import authenticate_request
 from app.core.settings import settings
 from app.modules.users.schemas import UserAccountCreate, UserAccountLogin
 from app.modules.users.service import UserService
@@ -21,16 +21,16 @@ async def login_user(request_body: UserAccountLogin, db: Session = Depends(parti
     return await user_service.login_user(request_body, db)
 
 @users_router.get("/me")
-@authenticate
-async def get_account_details(request: Request, user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
-    return await user_service.get_account_details(user_id, db)
+@authenticate_request
+async def get_account_details(request: Request, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
+    return await user_service.get_account_details(request.state.user_id, db)
 
 @users_router.put("/me/profile-picture")
-@authenticate
-async def update_profile_picture(file: UploadFile = File(...), user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
-    return await user_service.update_profile_picture(file, user_id, db)
+@authenticate_request
+async def update_profile_picture(request: Request, file: UploadFile = File(...), db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))) -> JSONResponse:
+    return await user_service.update_profile_picture(file, request.state.user_id, db)
 
 @users_router.delete("/me/profile-picture")
-@authenticate
-async def delete_profile_picture(user_id: str | None = None, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME)) ) -> JSONResponse:
-    return await user_service.delete_profile_picture(user_id, db)
+@authenticate_request
+async def delete_profile_picture(request: Request, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME)) ) -> JSONResponse:
+    return await user_service.delete_profile_picture(request.state.user_id, db)

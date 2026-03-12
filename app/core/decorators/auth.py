@@ -2,7 +2,7 @@ from fastapi import Request, HTTPException, status
 from functools import wraps
 from app.core.security.jwt import decode_token
 
-def authenticate(func):
+def authenticate_request(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         request: Request = kwargs.get("request")
@@ -37,7 +37,7 @@ def authenticate(func):
                 detail="Invalid or expired token"
             )
         
-        kwargs["user_id"] = payload["user_id"]
+        request.state.user_id = payload["user_id"]
         return await func(*args, **kwargs)
 
     return wrapper
