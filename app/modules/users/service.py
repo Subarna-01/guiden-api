@@ -51,6 +51,7 @@ class UserService:
             )
         
         except HTTPException:
+            db.rollback()
             raise
 
         except Exception as e:
@@ -156,7 +157,7 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def update_profile_picture(self, file: UploadFile, user_id: str, db: Session) -> JSONResponse:
+    async def upload_profile_picture(self, file: UploadFile, user_id: str, db: Session) -> JSONResponse:
         try:
             if not file.filename:
                 raise HTTPException(
@@ -184,7 +185,6 @@ class UserService:
                                     .filter(cast(UserProfilePicture.user_id, String) == user_id)\
                                     .first()
 
-            
             file_extension = file.filename.split(".")[-1]
             blob_name = f"{user_id}/profile-picture/{user_id}.{file_extension}"
             blob = gcs_bucket.get_blob(blob_name)
@@ -199,10 +199,10 @@ class UserService:
                     try:
                         gcs_bucket.delete_blob(usr_profile_pic_entry.object_path)
                     except Exception as e:
-                        db.rollback()
+                        logger.error(str(e))
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Unable to update profile picture"
+                            detail="Unable to upload profile picture"
                         )
 
                 usr_profile_pic_entry.object_path = blob_name
@@ -214,10 +214,10 @@ class UserService:
                 blob.upload_from_string(file_bytes, content_type=file.content_type)
                 url = gcs_bucket.generate_signed_url(blob_name)
             except Exception as e:
-                db.rollback()
+                logger.error(str(e))
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Unable to update profile picture"
+                    detail="Unable to upload profile picture"
                 )
         
             db.commit()
@@ -279,6 +279,7 @@ class UserService:
             try:
                 gcs_bucket.delete_blob(usr_profile_pic_entry.object_path)
             except Exception as e:
+                logger.error(str(e))
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Unable to delete profile picture"

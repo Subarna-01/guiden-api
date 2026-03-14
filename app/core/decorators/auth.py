@@ -2,7 +2,7 @@ from fastapi import Request, HTTPException, status
 from functools import wraps
 from app.core.security.jwt import decode_token
 
-def authenticate_request(func):
+def require_auth(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         request: Request = kwargs.get("request")

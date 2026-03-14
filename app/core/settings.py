@@ -26,6 +26,7 @@ class Settings:
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS"))
 
     USERS_BUCKET_NAME: str = os.getenv("USERS_BUCKET_NAME")
+    MASTER_BUCKET_NAME: str = os.getenv("MASTER_BUCKET_NAME")
 
     GCS_PROJECT_ID: str = os.getenv("GCS_PROJECT_ID")
     GCS_SECRET_ID: str = os.getenv("GCS_SECRET_ID")

@@ -1,3 +1,4 @@
+import warnings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -8,6 +9,8 @@ from app.core.settings import settings
 from app.modules.master.router import master_router
 from app.modules.search.router import search_router
 from app.modules.users.router import users_router
+
+warnings.filterwarnings("ignore")
 
 DB_NAMES = [settings.MASTER_DB_NAME, settings.USERS_DB_NAME]
 DB_BASES = [base.BaseMasterDb, base.BaseUsersDb]
