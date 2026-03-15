@@ -47,6 +47,15 @@ async def upload_country_image(
     )
 
 
+@master_router.get("/countries/codes")
+@require_auth
+async def get_country_codes(
+    request: Request,
+    db: Session = Depends(partial(get_db, settings.MASTER_DB_NAME)),
+) -> JSONResponse:
+    return await master_service.get_country_codes(db)
+
+
 @master_router.get("/documents/government-valid/{country_id}")
 @require_auth
 async def get_valid_government_documents_by_country(

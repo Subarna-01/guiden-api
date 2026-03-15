@@ -208,6 +208,53 @@ class MasterService:
                 detail="An unexpected error has occurred",
             )
 
+    async def get_country_codes(self, db: Session) -> JSONResponse:
+        try:
+            countries = (
+                db.query(
+                    Country.country_id,
+                    Country.country_name,
+                    Country.iso_code_2,
+                    Country.iso_code_3,
+                    Country.dialing_code,
+                )
+                .filter(Country.is_active == True)
+                .order_by(Country.country_id)
+                .all()
+            )
+
+            if not countries:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="No countries found"
+                )
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Country codes fetched successfully",
+                    "data": [
+                        {
+                            "country_id": country.country_id,
+                            "country_name": country.country_name,
+                            "iso_code_2": country.iso_code_2,
+                            "iso_code_3": country.iso_code_3,
+                            "dialing_code": country.dialing_code,
+                        }
+                        for country in countries
+                    ],
+                },
+            )
+
+        except HTTPException:
+            raise
+
+        except Exception as e:
+            logger.error(str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred",
+            )
+
     async def get_valid_government_documents_by_country(
         self, country_id: int, db: Session
     ) -> JSONResponse:
