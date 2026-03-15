@@ -12,8 +12,8 @@ from app.modules.users.router import users_router
 
 warnings.filterwarnings("ignore")
 
-DB_NAMES = [settings.MASTER_DB_NAME, settings.USERS_DB_NAME]
-DB_BASES = [base.BaseMasterDb, base.BaseUsersDb]
+DB_NAMES = [settings.MASTER_DB_NAME, settings.USERS_DB_NAME, settings.GUIDES_DB_NAME]
+DB_BASES = [base.BaseMasterDb, base.BaseUsersDb, base.BaseGuidesDb]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

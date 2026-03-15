@@ -14,6 +14,7 @@ class Settings:
 
     USERS_DB_NAME: str = os.getenv("USERS_DB_NAME")
     MASTER_DB_NAME: str = os.getenv("MASTER_DB_NAME")
+    GUIDES_DB_NAME: str = os.getenv("GUIDES_DB_NAME")
 
     ALLOWED_ORIGINS: list = ["*"]
     ALLOWED_CREDENTIALS: bool = True
