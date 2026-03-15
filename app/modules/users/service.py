@@ -20,10 +20,12 @@ class UserService:
         pass
 
     async def create_account(
-        self, data: UserAccountCreate, db: Session
+        self, request_body: UserAccountCreate, db: Session
     ) -> JSONResponse:
         try:
-            usr_entry = db.query(User).filter(User.email == data.email.lower()).first()
+            usr_entry = (
+                db.query(User).filter(User.email == request_body.email.lower()).first()
+            )
 
             if usr_entry:
                 raise HTTPException(
@@ -32,8 +34,8 @@ class UserService:
                 )
 
             usr_entry = User(
-                email=data.email.lower(),
-                password_hash=hash_password(data.password),
+                email=request_body.email.lower(),
+                password_hash=hash_password(request_body.password),
                 status=UserAccountStatus.ACTIVE.value,
             )
 
@@ -45,10 +47,7 @@ class UserService:
                 status_code=status.HTTP_201_CREATED,
                 content={
                     "message": "Account created successfully",
-                    "data": {
-                        "user_id": str(usr_entry.user_id),
-                        "email": usr_entry.email,
-                    },
+                    "data": {"user_id": str(usr_entry.user_id)},
                 },
             )
 
@@ -64,12 +63,16 @@ class UserService:
                 detail="An unexpected error has occurred",
             )
 
-    async def login_user(self, data: UserAccountLogin, db: Session) -> JSONResponse:
+    async def login_user(
+        self, request_body: UserAccountLogin, db: Session
+    ) -> JSONResponse:
         try:
-            usr_entry = db.query(User).filter(User.email == data.email.lower()).first()
+            usr_entry = (
+                db.query(User).filter(User.email == request_body.email.lower()).first()
+            )
 
             if not usr_entry or not verify_password(
-                data.password, usr_entry.password_hash
+                request_body.password, usr_entry.password_hash
             ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

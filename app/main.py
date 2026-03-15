@@ -1,4 +1,7 @@
 import warnings
+
+warnings.filterwarnings("ignore")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -9,11 +12,11 @@ from app.core.settings import settings
 from app.modules.master.router import master_router
 from app.modules.search.router import search_router
 from app.modules.users.router import users_router
-
-warnings.filterwarnings("ignore")
+from app.modules.guides.router import guides_router
 
 DB_NAMES = [settings.MASTER_DB_NAME, settings.USERS_DB_NAME, settings.GUIDES_DB_NAME]
 DB_BASES = [base.BaseMasterDb, base.BaseUsersDb, base.BaseGuidesDb]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,7 +29,7 @@ async def lifespan(app: FastAPI):
     elasticsearch_connection_manager.init_client()
 
     yield
-    
+
     db_connection_manager.close_all()
     elasticsearch_connection_manager.close_client()
 
@@ -48,3 +51,4 @@ app.add_middleware(
 app.include_router(master_router, prefix=settings.API_V1_STR)
 app.include_router(search_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
+app.include_router(guides_router, prefix=settings.API_V1_STR)

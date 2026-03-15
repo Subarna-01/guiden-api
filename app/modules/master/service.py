@@ -23,12 +23,12 @@ class MasterService:
         pass
 
     async def add_country(
-        self, data: CountryAdd, elasticsearch_client: Elasticsearch, db: Session
+        self, request_body: CountryAdd, elasticsearch_client: Elasticsearch, db: Session
     ) -> JSONResponse:
         try:
             country_entry = (
                 db.query(Country)
-                .filter(Country.country_name == data.country_name)
+                .filter(Country.country_name == request_body.country_name)
                 .first()
             )
 
@@ -38,7 +38,7 @@ class MasterService:
                     detail="Country already exists",
                 )
 
-            country_entry = Country(**data.model_dump())
+            country_entry = Country(**request_body.model_dump())
 
             db.add(country_entry)
             db.commit()
@@ -49,7 +49,7 @@ class MasterService:
                 id=country_entry.country_id,
                 document={
                     "country_id": country_entry.country_id,
-                    **data.model_dump(),
+                    **request_body.model_dump(),
                 },
             )
             return JSONResponse(

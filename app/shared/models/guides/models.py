@@ -100,7 +100,6 @@ class GuideGovernmentDocument(BaseGuidesDb):
     )
     document_type_id = Column("document_type_id", Integer, nullable=False)
     document_number = Column("document_number", String(50), unique=True, nullable=False)
-    object_path = Column("object_path", Text, nullable=False)
     is_document_verified = Column(
         "is_document_verified", Boolean, nullable=False, default=False
     )

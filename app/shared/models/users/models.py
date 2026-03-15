@@ -14,7 +14,9 @@ class User(BaseUsersDb):
     )
     email = Column("email", Text, unique=True, nullable=False)
     password_hash = Column("password_hash", Text, nullable=False)
-    is_otp_verified = Column("is_otp_verified", Boolean, nullable=False, default=True)
+    is_email_verified = Column(
+        "is_email_verified", Boolean, nullable=False, default=True
+    )
     status = Column("status", Text, nullable=False)
     created_at = Column(
         "created_at", TIMESTAMP(timezone=True), server_default=func.now()
