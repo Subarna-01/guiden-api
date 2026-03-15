@@ -11,6 +11,12 @@ search_service = SearchService()
 
 @search_router.get("/")
 @require_auth
-async def search(request: Request, q: str = Query(...), page: int = 1, size: int = 10, client: Elasticsearch = Depends(elasticsearch_connection_manager.get_client)) -> JSONResponse:
-    return await search_service.search(q, page, size, client)
+async def get_search_results(
+    request: Request, 
+    q: str = Query(...), 
+    page: int = 1, 
+    size: int = 10, 
+    client: Elasticsearch = Depends(elasticsearch_connection_manager.get_client)
+) -> JSONResponse:
+    return await search_service.get_search_results(q, page, size, client)
      

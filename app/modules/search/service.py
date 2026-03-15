@@ -1,90 +1,80 @@
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
-from elasticsearch import Elasticsearch, NotFoundError
+from elasticsearch import Elasticsearch
 from app.core.logging import logger
 
 class SearchService:
     def __init__(self) -> None:
         pass
 
-    async def search(self, q: str, page: int, size: int, client: Elasticsearch) -> JSONResponse:
-        try:
-            country_query = {
-                "query": {
-                    "multi_match": {
-                        "query": q.strip(),
-                        "fields": [
-                            "name^3",
-                            "description"
-                        ],
-                        "type": "phrase_prefix"
-                    }
-                }
-            }
+    async def get_search_results(
+        self, 
+        q: str, 
+        page: int, 
+        size: int, 
+        client: Elasticsearch
+    ) -> JSONResponse:
+        try:    
+            country_res = client.search(
+                            index="countries",
+                            body={
+                                "query": {
+                                    "multi_match": {
+                                        "query": q.strip(),
+                                        "fields": [
+                                            "name^3",
+                                            "description"
+                                        ],
+                                        "type": "phrase_prefix"
+                                    }
+                                }
+                            },
+                            from_=(page - 1) * size,
+                            size=size
+                        )
 
-            try:
-                res = client.search(
-                    index="countries",
-                    body=country_query,
-                    from_=(page - 1) * size,
-                    size=size
-                )
-            except NotFoundError:
-                return JSONResponse(
-                    status_code=status.HTTP_200_OK,
-                    content={
-                        "query": q,
-                        "page": page,
-                        "size": size,
-                        "total": 0,
-                        "results": []
-                    }
-                )
-
-            hits = res["hits"]["hits"]
-            total = res["hits"]["total"]["value"]
+            hits = country_res["hits"]["hits"]
+            total = country_res["hits"]["total"]["value"]
 
             countries = [hit.get("_source", {}) for hit in hits]
             country_ids = [c.get("country_id") for c in countries if c.get("country_id")]
 
-            image_map = {}
+            country_images = {}
+            
             if country_ids:
-                try:
-                    image_res = client.search(
-                        index="country_images",
-                        body={
-                            "query": {
-                                "bool": {
-                                    "must": [
-                                        {"terms": {"country_id": country_ids}},
-                                        {"term": {"image_type": "thumbnail"}}
-                                    ]
-                                }
-                            },
-                            "size": len(country_ids)
-                        }
-                    )
+                country_img_res = client.search(
+                                    index="country_images",
+                                    body={
+                                        "query": {
+                                            "bool": {
+                                                "must": [
+                                                    {"terms": {"country_id": country_ids}},
+                                                    {"term": {"image_type": "thumbnail"}}
+                                                ]
+                                            }
+                                        },
+                                        "size": len(country_ids)
+                                    }
+                                )
 
-                    for hit in image_res["hits"]["hits"]:
-                        src = hit.get("_source", {})
-                        cid = src.get("country_id")
-                        if cid:
-                            image_map[cid] = src.get("url")
-                except NotFoundError:
-                    image_map = {}
+                for hit in country_img_res["hits"]["hits"]:
+                    src = hit.get("_source", {})
+                    cid = src.get("country_id")
+                    if cid:
+                        country_images[cid] = src.get("url")
 
-            results_dict = {
+            data = {
                 "guides": [],
                 "destinations": []
             }
 
             for c in countries:
                 cid = c.get("country_id")
-                results_dict["destinations"].append({
+                data["destinations"].append({
                     "id": cid,
                     "name": c.get("name"),
                     "type": "country",
-                    "thumbnail": image_map.get(cid)
+                    "thumbnail": country_images.get(cid)
                 })
 
             return JSONResponse(
@@ -94,7 +84,7 @@ class SearchService:
                     "page": page,
                     "size": size,
                     "total": total,
-                    "results": results_dict
+                    "results": data
                 }
             )
 
