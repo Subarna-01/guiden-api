@@ -1,6 +1,7 @@
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import cast, String
 from sqlalchemy.exc import IntegrityError
 from app.core.logging import logger
 from app.shared.models.guides.models import Guide, GuideContact, GuideGovernmentDocument
@@ -159,6 +160,73 @@ class GuideService:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={"message": "No existing record found"},
+            )
+
+        except HTTPException:
+            raise
+
+        except Exception as e:
+            logger.error(str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred",
+            )
+
+    async def get_account_details(self, guide_id: str, db: Session) -> JSONResponse:
+        try:
+            guide_entry = (
+                db.query(Guide)
+                .filter(
+                    cast(Guide.guide_id, String) == guide_id,
+                    Guide.status == GuideAccountStatus.ACTIVE.value,
+                )
+                .first()
+            )
+
+            if not guide_entry:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Guide not found",
+                )
+
+            contact = guide_entry.guide_contact
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Account details fetched successfully",
+                    "data": {
+                        "guide_id": str(guide_entry.guide_id),
+                        "legal_first_name": guide_entry.legal_first_name,
+                        "legal_middle_name": guide_entry.legal_middle_name,
+                        "legal_last_name": guide_entry.legal_last_name,
+                        "date_of_birth": str(guide_entry.date_of_birth),
+                        "nationality": guide_entry.nationality,
+                        "gender": guide_entry.gender,
+                        "contact": (
+                            {
+                                "email": contact.email if contact else None,
+                                "is_email_verified": (
+                                    contact.is_email_verified if contact else None
+                                ),
+                                "dialing_code": (
+                                    contact.dialing_code if contact else None
+                                ),
+                                "mobile_number": (
+                                    contact.mobile_number if contact else None
+                                ),
+                                "is_mobile_number_verified": (
+                                    contact.is_mobile_number_verified
+                                    if contact
+                                    else None
+                                ),
+                            }
+                            if contact
+                            else None
+                        ),
+                        "status": guide_entry.status,
+                    },
+                },
             )
 
         except HTTPException:

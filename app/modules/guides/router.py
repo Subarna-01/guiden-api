@@ -26,3 +26,11 @@ async def check_existing_record(
     db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
 ) -> JSONResponse:
     return await guide_service.check_existing_record(request_body, db)
+
+
+@guides_router.get("/{guide_id}/profile")
+async def get_account_details(
+    guide_id: str,
+    db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
+) -> JSONResponse:
+    return await guide_service.get_account_details(guide_id, db)
