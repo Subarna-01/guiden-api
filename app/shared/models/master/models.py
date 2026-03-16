@@ -39,6 +39,11 @@ class Country(BaseMasterDb):
     images = relationship(
         "CountryImage", back_populates="country", cascade="all, delete-orphan"
     )
+    nationality = relationship(
+        "Nationality",
+        back_populates="country",
+        cascade="all, delete-orphan",
+    )
     document_validations = relationship(
         "GovernmentDocumentValidCountry",
         back_populates="country",
@@ -71,6 +76,36 @@ class CountryImage(BaseMasterDb):
     )
 
     country = relationship("Country", back_populates="images")
+
+
+class Nationality(BaseMasterDb):
+    __tablename__ = "nationalities"
+    __table_args__ = {"extend_existing": True}
+
+    nationality_id = Column(
+        "nationality_id", Integer, primary_key=True, autoincrement=True
+    )
+
+    nationality_name = Column(
+        "nationality_name", String(150), nullable=False, unique=True
+    )
+
+    country_id = Column(
+        "country_id", BigInteger, ForeignKey("countries.country_id", ondelete="CASCADE")
+    )
+
+    created_at = Column(
+        "created_at", TIMESTAMP(timezone=True), server_default=func.now()
+    )
+
+    updated_at = Column(
+        "updated_at",
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    country = relationship("Country", back_populates="nationality")
 
 
 class GovernmentDocumentType(BaseMasterDb):
