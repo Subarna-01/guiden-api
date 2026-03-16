@@ -38,6 +38,9 @@ class Guide(BaseGuidesDb):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    last_logged_in_at = Column(
+        "last_logged_in_at", TIMESTAMP(timezone=True), server_default=func.now()
+    )
     deleted_at = Column("deleted_at", TIMESTAMP(timezone=True))
 
     guide_contact = relationship(
