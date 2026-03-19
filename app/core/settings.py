@@ -1,11 +1,22 @@
 import os
 from dotenv import load_dotenv
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 load_dotenv()
 
 class Settings:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = os.getenv("PROJECT_NAME")
+
+    TEMPLATE_ENV = Environment(
+        loader=FileSystemLoader(os.path.join(os.getcwd(), "app", "core", "static", "templates")),
+        autoescape=select_autoescape(["html", "xml"])
+    )
+
+    SMTP_HOST: str = os.getenv("SMTP_HOST")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT"))
+    SMTP_USER: str = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD")
 
     POSTGRES_HOST: str = os.getenv("POSTGRES_HOST")
     POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT"))

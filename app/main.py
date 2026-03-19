@@ -13,6 +13,7 @@ from app.modules.master.router import master_router
 from app.modules.search.router import search_router
 from app.modules.users.router import users_router
 from app.modules.guides.router import guides_router
+from app.modules.email.router import email_router
 
 DB_NAMES = [settings.MASTER_DB_NAME, settings.USERS_DB_NAME, settings.GUIDES_DB_NAME]
 DB_BASES = [base.BaseMasterDb, base.BaseUsersDb, base.BaseGuidesDb]
@@ -52,3 +53,4 @@ app.include_router(master_router, prefix=settings.API_V1_STR)
 app.include_router(search_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(guides_router, prefix=settings.API_V1_STR)
+app.include_router(email_router, prefix=settings.API_V1_STR)
