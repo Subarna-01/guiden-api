@@ -235,7 +235,7 @@ class UserService:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
-                    "message": "Profile picture has been updated",
+                    "message": "Profile picture updated",
                     "data": {"url": url},
                 },
             )
@@ -304,7 +304,7 @@ class UserService:
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={"message": "Profile picture has been removed"},
+                content={"message": "Profile picture removed"},
             )
 
         except HTTPException:

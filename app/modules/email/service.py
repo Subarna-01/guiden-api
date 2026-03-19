@@ -12,7 +12,7 @@ class EmailService:
         pass
 
     def render_template(self, template_name: str, context: dict) -> str:
-        template = settings.TEMPLATE_ENV.get_template(template_name)
+        template = settings.TEMPLATE_ENV.get_template(f"email/{template_name}")
         return template.render(**context)
 
     async def send(self, request_body: Email) -> JSONResponse:
@@ -24,7 +24,7 @@ class EmailService:
                 _email_subject = "Verify Your OTP"
 
                 _html_body = self.render_template(
-                    "email/verify_otp.html",
+                    "verify_otp.html",
                     {
                         "otp": request_body.otp,
                         "otp_validity_mins": request_body.otp_validity_mins,
@@ -35,7 +35,7 @@ class EmailService:
                 _email_subject = "Sign Up Confirmation"
                 
                 _html_body = self.render_template(
-                    "email/account_create.html",
+                    "account_create.html",
                     {
                         "email": request_body.to,
                     }
@@ -64,7 +64,7 @@ class EmailService:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
-                    "message": "Email sent successfully"
+                    "message": "Request queued"
                 },
             )
 
