@@ -5,7 +5,7 @@ class ElasticSearchConnectionManager:
     _instance = None
     _client = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -26,4 +26,4 @@ class ElasticSearchConnectionManager:
             self._client.close()
             self._client = None
     
-elasticsearch_connection_manager = ElasticSearchConnectionManager()
+elasticsearch_conn_manager = ElasticSearchConnectionManager()

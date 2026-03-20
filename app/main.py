@@ -5,8 +5,8 @@ warnings.filterwarnings("ignore")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.core.database.connection import db_connection_manager
-from app.core.elasticsearch.connection import elasticsearch_connection_manager
+from app.core.database.connection import db_conn_manager
+from app.core.elasticsearch.connection import elasticsearch_conn_manager
 from app.core.database import base
 from app.core.settings import settings
 from app.modules.master.router import master_router
@@ -21,18 +21,18 @@ DB_BASES = [base.BaseMasterDb, base.BaseUsersDb, base.BaseGuidesDb]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db_connection_manager.init_engines(DB_NAMES)
+    db_conn_manager.init_engines(DB_NAMES)
 
     for db_name, Base in zip(DB_NAMES, DB_BASES):
-        engine = db_connection_manager.get_engine(db_name)
+        engine = db_conn_manager.get_engine(db_name)
         Base.metadata.create_all(bind=engine)
 
-    elasticsearch_connection_manager.init_client()
+    elasticsearch_conn_manager.init_client()
 
     yield
 
-    db_connection_manager.close_all()
-    elasticsearch_connection_manager.close_client()
+    db_conn_manager.close_all()
+    elasticsearch_conn_manager.close_client()
 
 
 app = FastAPI(

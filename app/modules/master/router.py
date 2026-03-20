@@ -5,7 +5,7 @@ from functools import partial
 from elasticsearch import Elasticsearch
 from app.core.database.dependencies import get_db
 from app.core.decorators.auth import require_auth
-from app.core.elasticsearch.connection import elasticsearch_connection_manager
+from app.core.elasticsearch.connection import elasticsearch_conn_manager
 from app.core.settings import settings
 from app.modules.master.enum import CountryImageType
 from app.modules.master.schemas import CountryAdd
@@ -22,7 +22,7 @@ async def add_country(
     request: Request,
     request_body: CountryAdd,
     elasticsearch_client: Elasticsearch = Depends(
-        elasticsearch_connection_manager.get_client
+        elasticsearch_conn_manager.get_client
     ),
     db: Session = Depends(partial(get_db, settings.MASTER_DB_NAME)),
 ) -> JSONResponse:
@@ -37,7 +37,7 @@ async def upload_country_image(
     image_type: CountryImageType = Form(...),
     file: UploadFile = File(...),
     elasticsearch_client: Elasticsearch = Depends(
-        elasticsearch_connection_manager.get_client
+        elasticsearch_conn_manager.get_client
     ),
     db: Session = Depends(partial(get_db, settings.MASTER_DB_NAME)),
 ) -> JSONResponse:

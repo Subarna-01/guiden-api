@@ -10,7 +10,7 @@ class DbConnectionManager:
         f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}"
     )
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -34,4 +34,4 @@ class DbConnectionManager:
         for engine in self._engines.values():
             engine.dispose()
 
-db_connection_manager = DbConnectionManager()
+db_conn_manager = DbConnectionManager()
