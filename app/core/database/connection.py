@@ -18,7 +18,7 @@ class DbConnectionManager:
     def init_engines(self, db_names):
         for db_name in db_names:
             engine = create_engine(
-                f"{self.DATABASE_URL}/{db_name}", echo=False, future=True
+                f"{self.DATABASE_URL}/{db_name}", echo=False, future=True, isolation_level="READ COMMITTED"
             )
             SessionLocal = sessionmaker(bind=engine)
             self._engines[db_name] = engine
