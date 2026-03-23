@@ -9,3 +9,7 @@ class UserAccountCreate(BaseModel):
 class UserAccountLogin(BaseModel):
     email: EmailStr
     password: str
+
+class UserPasswordReset(BaseModel):
+    email: EmailStr
+    new_password: constr(min_length=8)  # type: ignore

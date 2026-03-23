@@ -5,7 +5,7 @@ from functools import partial
 from app.core.database.dependencies import get_db
 from app.core.decorators.auth import require_auth
 from app.core.settings import settings
-from app.modules.users.schemas import UserAccountCreate, UserAccountLogin
+from app.modules.users.schemas import UserAccountCreate, UserAccountLogin, UserPasswordReset
 from app.modules.users.service import UserService
 
 users_router = APIRouter(prefix="/users", tags=["users"])
@@ -53,3 +53,10 @@ async def delete_profile_picture(
     request: Request, db: Session = Depends(partial(get_db, settings.USERS_DB_NAME))
 ) -> JSONResponse:
     return await user_service.delete_profile_picture(request.state.user_id, db)
+
+@users_router.post("/me/reset-password")
+async def reset_password(
+    request_body: UserPasswordReset,
+    db: Session = Depends(partial(get_db, settings.USERS_DB_NAME)),
+) -> JSONResponse:
+    return await user_service.reset_password(request_body, db)

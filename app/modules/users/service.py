@@ -10,7 +10,11 @@ from app.core.logging import logger
 from app.core.settings import settings
 from app.shared.models.users.models import User, UserProfilePicture
 from app.modules.users.enum import UserAccountStatus
-from app.modules.users.schemas import UserAccountCreate, UserAccountLogin
+from app.modules.users.schemas import (
+    UserAccountCreate,
+    UserAccountLogin,
+    UserPasswordReset,
+)
 
 gcs_bucket = GCSBucket(settings.USERS_BUCKET_NAME)
 
@@ -24,7 +28,7 @@ class UserService:
     ) -> JSONResponse:
         try:
             usr_entry = (
-                db.query(User).filter(User.email == request_body.email.lower()).first()
+                db.query(User).filter(User.email == request_body.email.lower().strip()).first()
             )
 
             if usr_entry:
@@ -34,8 +38,8 @@ class UserService:
                 )
 
             usr_entry = User(
-                email=request_body.email.lower(),
-                password_hash=hash_password(request_body.password),
+                email=request_body.email.lower().strip(),
+                password_hash=hash_password(request_body.password.strip()),
                 status=UserAccountStatus.ACTIVE.value,
             )
 
@@ -68,11 +72,11 @@ class UserService:
     ) -> JSONResponse:
         try:
             usr_entry = (
-                db.query(User).filter(User.email == request_body.email.lower()).first()
+                db.query(User).filter(User.email == request_body.email.lower().strip()).first()
             )
 
             if not usr_entry or not verify_password(
-                request_body.password, usr_entry.password_hash
+                request_body.password.strip(), usr_entry.password_hash
             ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -309,6 +313,47 @@ class UserService:
 
         except HTTPException:
             db.rollback()
+            raise
+
+        except Exception as e:
+            logger.error(str(e))
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred",
+            )
+
+    async def reset_password(
+        self, request_body: UserPasswordReset, db: Session
+    ) -> JSONResponse:
+        try:
+            usr_entry = (
+                db.query(User)
+                .filter(
+                    User.email == request_body.email.strip().lower(),
+                    User.status == UserAccountStatus.ACTIVE.value,
+                )
+                .first()
+            )
+
+            if not usr_entry:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found",
+                )
+
+            usr_entry.password_hash = hash_password(request_body.new_password.strip())
+            usr_entry.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            db.commit()
+            db.refresh(usr_entry)
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"message": "Password reset successfully"},
+            )
+
+        except HTTPException:
             raise
 
         except Exception as e:
