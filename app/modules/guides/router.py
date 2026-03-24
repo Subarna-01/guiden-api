@@ -7,13 +7,11 @@ from app.core.database.dependencies import get_db
 from app.core.settings import settings
 from app.modules.guides.enum import GuideFilterType
 from app.modules.guides.schemas import GuideAccountCreate, GuideExistingRecordCheck
-from app.modules.guides.service import GuideService, GuideCategoryService
+from app.modules.guides.service import GuideService
 
 guides_router = APIRouter(prefix="/guides", tags=["guides"])
 
 guide_service = GuideService()
-
-guide_category_service = GuideCategoryService()
 
 
 @guides_router.post("/create-account")
@@ -33,29 +31,26 @@ async def check_existing_record(
 
 
 @guides_router.get("/{guide_id}/profile")
-async def get_account_details(
+async def fetch_account_details(
     guide_id: str,
     db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
 ) -> JSONResponse:
-    return await guide_service.get_account_details(guide_id, db)
+    return await guide_service.fetch_account_details(guide_id, db)
 
 
 @guides_router.get("/")
-async def get_all(
+async def fetch_guides(
     filter_type: Optional[GuideFilterType] = Query(default=None),
     filter: Optional[str] = Query(default=None),
     limit: int = Query(default=10, ge=1),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
 ) -> JSONResponse:
-    return await guide_service.get_all(filter_type, filter, limit, offset, db)
+    return await guide_service.fetch_guides(filter_type, filter, limit, offset, db)
 
 
-# Guide categories
-
-
-@guides_router.get("/categories/all")
-async def get_all(
+@guides_router.get("/categories")
+async def fetch_categories(
     db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
 ) -> JSONResponse:
-    return await guide_category_service.get_all()
+    return await guide_service.fetch_categories(db)

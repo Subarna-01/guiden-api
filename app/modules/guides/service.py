@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, String, func
 from sqlalchemy.exc import IntegrityError
 from app.core.logging import logger
-from app.shared.models.guides.models import Guide, GuideContact, GuideGovernmentDocument
+from app.shared.models.guides.models import Guide, GuideContact, GuideCategory
 from app.modules.guides.enum import GuideAccountStatus, GuideFilterType
 from app.modules.guides.schemas import GuideAccountCreate, GuideExistingRecordCheck
 
@@ -22,8 +22,6 @@ class GuideService:
                     email=request_body.email,
                     dialing_code=request_body.dialing_code,
                     mobile_number=request_body.mobile_number,
-                    document_type_id=request_body.document_type_id,
-                    document_number=request_body.document_number,
                 ),
                 db,
             )
@@ -33,7 +31,7 @@ class GuideService:
                 legal_middle_name=request_body.legal_middle_name,
                 legal_last_name=request_body.legal_last_name,
                 date_of_birth=request_body.date_of_birth,
-                nationality=request_body.nationality,
+                country=request_body.country,
                 gender=request_body.gender,
                 status=GuideAccountStatus.ACTIVE.value,
             )
@@ -45,14 +43,6 @@ class GuideService:
                 mobile_number=request_body.mobile_number,
                 is_mobile_number_verified=request_body.is_mobile_number_verified,
             )
-
-            guide_entry.guide_government_document = [
-                GuideGovernmentDocument(
-                    document_type_id=request_body.document_type_id,
-                    document_number=request_body.document_number,
-                    is_document_verified=request_body.is_document_verified,
-                )
-            ]
 
             db.add(guide_entry)
             db.commit()
@@ -131,32 +121,6 @@ class GuideService:
                         detail="This mobile number already exists",
                     )
 
-            if (
-                "document_type_id" in request_body.model_fields_set
-                and request_body.document_type_id is not None
-                and "document_number" in request_body.model_fields_set
-                and request_body.document_number is not None
-            ):
-                guide_document_entry = (
-                    db.query(GuideGovernmentDocument)
-                    .filter(
-                        GuideGovernmentDocument.document_type_id
-                        == request_body.document_type_id,
-                        GuideGovernmentDocument.document_number
-                        == request_body.document_number,
-                        GuideGovernmentDocument.guide.has(
-                            status=GuideAccountStatus.ACTIVE.value
-                        ),
-                    )
-                    .first()
-                )
-
-                if guide_document_entry:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="A record with this document number already exists.",
-                    )
-
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={"message": "No existing record found"},
@@ -172,7 +136,7 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-    async def get_account_details(self, guide_id: str, db: Session) -> JSONResponse:
+    async def fetch_account_details(self, guide_id: str, db: Session) -> JSONResponse:
         try:
             guide_entry = (
                 db.query(Guide)
@@ -194,14 +158,14 @@ class GuideService:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
-                    "message": "Account details fetched successfully",
+                    "message": "Data fetched successfully",
                     "data": {
                         "guide_id": str(guide_entry.guide_id),
                         "legal_first_name": guide_entry.legal_first_name,
                         "legal_middle_name": guide_entry.legal_middle_name,
                         "legal_last_name": guide_entry.legal_last_name,
                         "date_of_birth": str(guide_entry.date_of_birth),
-                        "nationality": guide_entry.nationality,
+                        "country": guide_entry.country,
                         "gender": guide_entry.gender,
                         "contact": (
                             {
@@ -239,7 +203,7 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-    async def get_all(
+    async def fetch_guides(
         self,
         filter_type: GuideFilterType,
         filter: str,
@@ -305,39 +269,34 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-
-class GuideCategoryService:
-    def __init__(self) -> None:
-        pass
-
-    async def get_all(self) -> JSONResponse:
+    async def fetch_categories(self, db: Session) -> JSONResponse:
         try:
+            category_entries = db.query(
+                GuideCategory.category_id,
+                GuideCategory.category_name,
+                GuideCategory.preview_image_path,
+            ).all()
+
+            if not category_entries:
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={"message": "No data found", "data": []},
+                )
+
+            data = [
+                {
+                    "category_id": entry.category_id,
+                    "category_name": entry.category_name,
+                    "preview_image_path": entry.preview_image_path,
+                }
+                for entry in category_entries
+            ]
+
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
                     "message": "Data fetched successfully",
-                    "data": [
-                        {
-                            "category_id": 1,
-                            "category_name": "Adventure",
-                            "preview_image_url": "",
-                        },
-                        {
-                            "category_id": 2,
-                            "category_name": "Day Tour",
-                            "preview_image_url": "",
-                        },
-                        {
-                            "category_id": 3,
-                            "category_name": "Nature",
-                            "preview_image_url": "",
-                        },
-                        {
-                            "category_id": 4,
-                            "category_name": "Culture",
-                            "preview_image_url": "",
-                        },
-                    ],
+                    "data": data,
                 },
             )
 
@@ -345,6 +304,7 @@ class GuideCategoryService:
             raise
 
         except Exception as e:
+            logger.error(str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
