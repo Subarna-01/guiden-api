@@ -1,11 +1,11 @@
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, String
+from sqlalchemy import cast, String, func
 from sqlalchemy.exc import IntegrityError
 from app.core.logging import logger
 from app.shared.models.guides.models import Guide, GuideContact, GuideGovernmentDocument
-from app.modules.guides.enum import GuideAccountStatus
+from app.modules.guides.enum import GuideAccountStatus, GuideFilterType
 from app.modules.guides.schemas import GuideAccountCreate, GuideExistingRecordCheck
 
 
@@ -234,6 +234,117 @@ class GuideService:
 
         except Exception as e:
             logger.error(str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred",
+            )
+
+    async def get_all(
+        self,
+        filter_type: GuideFilterType,
+        filter: str,
+        limit: int,
+        offset: int,
+        db: Session,
+    ) -> JSONResponse:
+        try:
+            guide_entries = []
+
+            query = db.query(
+                Guide.guide_id,
+                func.concat(
+                    Guide.legal_first_name,
+                    " ",
+                    func.coalesce(Guide.legal_middle_name, ""),
+                    " ",
+                    Guide.legal_last_name,
+                ).label("full_name"),
+            )
+
+            if filter_type:
+                if filter_type == GuideFilterType.CATEGORY.value:
+                    pass
+
+            guide_entries = query.offset(offset).limit(limit).all()
+
+            if not guide_entries:
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={
+                        "message": "No data found",
+                        "limit": limit,
+                        "offset": offset,
+                        "data": [],
+                    },
+                )
+
+            data = [
+                {
+                    "guide_id": str(entry.guide_id),
+                    "full_name": " ".join(entry.full_name.split()),
+                }
+                for entry in guide_entries
+            ]
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Data fetched successfully",
+                    "limit": limit,
+                    "offset": offset,
+                    "data": data,
+                },
+            )
+
+        except HTTPException:
+            raise
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error has occurred",
+            )
+
+
+class GuideCategoryService:
+    def __init__(self) -> None:
+        pass
+
+    async def get_all(self) -> JSONResponse:
+        try:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "Data fetched successfully",
+                    "data": [
+                        {
+                            "category_id": 1,
+                            "category_name": "Adventure",
+                            "preview_image_url": "",
+                        },
+                        {
+                            "category_id": 2,
+                            "category_name": "Day Tour",
+                            "preview_image_url": "",
+                        },
+                        {
+                            "category_id": 3,
+                            "category_name": "Nature",
+                            "preview_image_url": "",
+                        },
+                        {
+                            "category_id": 4,
+                            "category_name": "Culture",
+                            "preview_image_url": "",
+                        },
+                    ],
+                },
+            )
+
+        except HTTPException:
+            raise
+
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
