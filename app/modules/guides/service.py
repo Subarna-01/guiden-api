@@ -5,7 +5,7 @@ from sqlalchemy import cast, String, func
 from sqlalchemy.exc import IntegrityError
 from app.core.logging import logger
 from app.shared.models.guides.models import Guide, GuideContact, GuideCategory
-from app.modules.guides.enum import GuideAccountStatus, GuideFilterType
+from app.modules.guides.enum import GuideAccountStatus
 from app.modules.guides.schemas import GuideAccountCreate, GuideExistingRecordCheck
 
 
@@ -136,7 +136,7 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-    async def fetch_account_details(self, guide_id: str, db: Session) -> JSONResponse:
+    async def get_current_guide(self, guide_id: str, db: Session) -> JSONResponse:
         try:
             guide_entry = (
                 db.query(Guide)
@@ -153,12 +153,12 @@ class GuideService:
                     detail="Guide not found",
                 )
 
-            contact = guide_entry.guide_contact
+            guide_contact = guide_entry.guide_contact
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
-                    "message": "Data fetched successfully",
+                    "status": "success",
                     "data": {
                         "guide_id": str(guide_entry.guide_id),
                         "legal_first_name": guide_entry.legal_first_name,
@@ -169,26 +169,32 @@ class GuideService:
                         "gender": guide_entry.gender,
                         "contact": (
                             {
-                                "email": contact.email if contact else None,
+                                "email": guide_contact.email if guide_contact else None,
                                 "is_email_verified": (
-                                    contact.is_email_verified if contact else None
+                                    guide_contact.is_email_verified
+                                    if guide_contact
+                                    else None
                                 ),
                                 "dialing_code": (
-                                    contact.dialing_code if contact else None
+                                    guide_contact.dialing_code
+                                    if guide_contact
+                                    else None
                                 ),
                                 "mobile_number": (
-                                    contact.mobile_number if contact else None
+                                    guide_contact.mobile_number
+                                    if guide_contact
+                                    else None
                                 ),
                                 "is_mobile_number_verified": (
-                                    contact.is_mobile_number_verified
-                                    if contact
+                                    guide_contact.is_mobile_number_verified
+                                    if guide_contact
                                     else None
                                 ),
                             }
-                            if contact
+                            if guide_contact
                             else None
                         ),
-                        "status": guide_entry.status,
+                        "account_status": guide_entry.status,
                     },
                 },
             )
@@ -203,18 +209,40 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-    async def fetch_guides(
-        self,
-        filter_type: GuideFilterType,
-        filter: str,
-        limit: int,
-        offset: int,
-        db: Session,
-    ) -> JSONResponse:
+    async def get_all_categories(self, db: Session) -> JSONResponse:
         try:
-            guide_entries = []
+            categories = db.query(
+                GuideCategory.category_id,
+                GuideCategory.category_name,
+                GuideCategory.preview_image_path,
+            ).all()
 
-            query = db.query(
+            _data = [
+                {
+                    "category_id": entry.category_id,
+                    "category_name": entry.category_name,
+                    "preview_image_path": entry.preview_image_path,
+                }
+                for entry in categories
+            ]
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"status": "success", "data": _data},
+            )
+
+        except HTTPException:
+            raise
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred",
+            )
+
+    async def filter_by_category(self, db: Session) -> JSONResponse:
+        try:
+            guide_entries = db.query(
                 Guide.guide_id,
                 func.concat(
                     Guide.legal_first_name,
@@ -223,41 +251,21 @@ class GuideService:
                     " ",
                     Guide.legal_last_name,
                 ).label("full_name"),
+                Guide.country,
             )
 
-            if filter_type:
-                if filter_type == GuideFilterType.CATEGORY.value:
-                    pass
-
-            guide_entries = query.offset(offset).limit(limit).all()
-
-            if not guide_entries:
-                return JSONResponse(
-                    status_code=status.HTTP_200_OK,
-                    content={
-                        "message": "No data found",
-                        "limit": limit,
-                        "offset": offset,
-                        "data": [],
-                    },
-                )
-
-            data = [
+            _data = [
                 {
                     "guide_id": str(entry.guide_id),
                     "full_name": " ".join(entry.full_name.split()),
+                    "country": entry.country,
                 }
                 for entry in guide_entries
             ]
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "message": "Data fetched successfully",
-                    "limit": limit,
-                    "offset": offset,
-                    "data": data,
-                },
+                content={"status": "success", "data": _data},
             )
 
         except HTTPException:
@@ -266,46 +274,5 @@ class GuideService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error has occurred",
-            )
-
-    async def fetch_categories(self, db: Session) -> JSONResponse:
-        try:
-            category_entries = db.query(
-                GuideCategory.category_id,
-                GuideCategory.category_name,
-                GuideCategory.preview_image_path,
-            ).all()
-
-            if not category_entries:
-                return JSONResponse(
-                    status_code=status.HTTP_200_OK,
-                    content={"message": "No data found", "data": []},
-                )
-
-            data = [
-                {
-                    "category_id": entry.category_id,
-                    "category_name": entry.category_name,
-                    "preview_image_path": entry.preview_image_path,
-                }
-                for entry in category_entries
-            ]
-
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={
-                    "message": "Data fetched successfully",
-                    "data": data,
-                },
-            )
-
-        except HTTPException:
-            raise
-
-        except Exception as e:
-            logger.error(str(e))
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error has occurred",
+                detail="An unexpected error occurred",
             )
