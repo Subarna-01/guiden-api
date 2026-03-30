@@ -1,4 +1,5 @@
 import smtplib
+import datetime
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from email.mime.text import MIMEText
@@ -6,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from app.core.settings import settings
 from app.modules.email.enum import EmailTemplate
 from app.modules.email.schemas import Email
+
 
 class EmailService:
     def __init__(self) -> None:
@@ -19,7 +21,7 @@ class EmailService:
         try:
             _email_subject = ""
             _html_body = ""
-            
+
             if request_body.template_name == EmailTemplate.VERIFY_OTP.value:
                 _email_subject = "Verify Your OTP"
 
@@ -27,25 +29,26 @@ class EmailService:
                     "verify_otp.html",
                     {
                         "otp": request_body.otp,
-                        "otp_validity_mins": request_body.otp_validity_mins,
-                    }
+                        "current_year": datetime.datetime.now().year,
+                    },
                 )
 
-            elif request_body.template_name == EmailTemplate.ACCOUNT_CREATE.value:
+            elif request_body.template_name == EmailTemplate.SIGNUP_CONFIRMATION.value:
                 _email_subject = "Sign Up Confirmation"
-                
+
                 _html_body = self.render_template(
-                    "account_create.html",
+                    "signup_confirmation.html",
                     {
                         "email": request_body.to,
-                    }
+                        "current_year": datetime.datetime.now().year,
+                    },
                 )
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid email template provided"
+                    detail="Invalid email template provided",
                 )
-            
+
             message = MIMEMultipart()
             message["From"] = settings.SMTP_USER
             message["To"] = request_body.to
@@ -60,12 +63,10 @@ class EmailService:
 
             except Exception as e:
                 raise e
-            
+
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "message": "Request queued"
-                },
+                content={"message": "Request queued"},
             )
 
         except HTTPException:
@@ -76,4 +77,3 @@ class EmailService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An unexpected error has occurred",
             )
-

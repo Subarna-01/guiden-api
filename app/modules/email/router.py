@@ -7,8 +7,7 @@ email_router = APIRouter(prefix="/email", tags=["email"])
 
 email_service = EmailService()
 
+
 @email_router.post("/send")
-async def send(
-    request_body: Email
-) -> JSONResponse:
+async def send(request_body: Email) -> JSONResponse:
     return await email_service.send(request_body)
