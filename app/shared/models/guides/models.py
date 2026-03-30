@@ -84,18 +84,18 @@ class GuideContact(BaseGuidesDb):
     guide = relationship("Guide", back_populates="guide_contact", uselist=False)
 
 
-class GuideCategory(BaseGuidesDb):
-    __tablename__ = "guide_categories"
+class ActivityOffering(BaseGuidesDb):
+    __tablename__ = "activity_offerings"
     __table_args__ = {"extend_existing": True}
 
-    category_id = Column(
-        "category_id",
+    activity_id = Column(
+        "activity_id",
         Integer,
         primary_key=True,
         nullable=False,
     )
-    category_name = Column("category_name", String(50), nullable=False)
-    preview_image_path = Column("preview_image_path", Text)
+    activity_name = Column("activity_name", String(50), nullable=False)
+    display_icon_url = Column("display_icon_url", Text, nullable=False)
     is_active = Column("is_active", Boolean, default=True)
     created_at = Column(
         "created_at", TIMESTAMP(timezone=True), server_default=func.now()

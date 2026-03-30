@@ -1,10 +1,14 @@
 from fastapi import status, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, String, func
+from sqlalchemy import cast, String
 from sqlalchemy.exc import IntegrityError
 from app.core.logging import logger
-from app.shared.models.guides.models import Guide, GuideContact, GuideCategory
+from app.shared.models.guides.models import (
+    Guide,
+    GuideContact,
+    ActivityOffering,
+)
 from app.modules.guides.enum import GuideAccountStatus
 from app.modules.guides.schemas import GuideAccountCreate, GuideExistingRecordCheck
 
@@ -209,58 +213,21 @@ class GuideService:
                 detail="An unexpected error has occurred",
             )
 
-    async def get_all_categories(self, db: Session) -> JSONResponse:
+    async def get_activity_offerings(self, db: Session) -> JSONResponse:
         try:
-            categories = db.query(
-                GuideCategory.category_id,
-                GuideCategory.category_name,
-                GuideCategory.preview_image_path,
+            activities = db.query(
+                ActivityOffering.activity_id,
+                ActivityOffering.activity_name,
+                ActivityOffering.display_icon_url,
             ).all()
 
             _data = [
                 {
-                    "category_id": entry.category_id,
-                    "category_name": entry.category_name,
-                    "preview_image_path": entry.preview_image_path,
+                    "activity_id": activity.activity_id,
+                    "activity_name": activity.activity_name,
+                    "display_icon_url": activity.display_icon_url,
                 }
-                for entry in categories
-            ]
-
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"status": "success", "data": _data},
-            )
-
-        except HTTPException:
-            raise
-
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error occurred",
-            )
-
-    async def filter_by_category(self, db: Session) -> JSONResponse:
-        try:
-            guide_entries = db.query(
-                Guide.guide_id,
-                func.concat(
-                    Guide.legal_first_name,
-                    " ",
-                    func.coalesce(Guide.legal_middle_name, ""),
-                    " ",
-                    Guide.legal_last_name,
-                ).label("full_name"),
-                Guide.country,
-            )
-
-            _data = [
-                {
-                    "guide_id": str(entry.guide_id),
-                    "full_name": " ".join(entry.full_name.split()),
-                    "country": entry.country,
-                }
-                for entry in guide_entries
+                for activity in activities
             ]
 
             return JSONResponse(

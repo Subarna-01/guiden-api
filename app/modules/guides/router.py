@@ -36,15 +36,8 @@ async def get_current_guide(
     return await guide_service.get_current_guide(guide_id, db)
 
 
-@guides_router.get("/categories")
-async def get_all_categories(
+@guides_router.get("/offerings/activity")
+async def get_activity_offerings(
     db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
 ) -> JSONResponse:
-    return await guide_service.get_all_categories(db)
-
-
-@guides_router.get("/filter-by-category")
-async def filter_by_category(
-    db: Session = Depends(partial(get_db, settings.GUIDES_DB_NAME)),
-) -> JSONResponse:
-    return await guide_service.filter_by_category(db)
+    return await guide_service.get_activity_offerings(db)
